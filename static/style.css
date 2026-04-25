@@ -1,0 +1,256 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f6f1e8;
+  --paper: #fffdf8;
+  --ink: #1f1b16;
+  --muted: #6f6659;
+  --line: #d8c9b3;
+  --accent: #c76b2d;
+  --accent-dark: #9f4f1d;
+  --soft: #efe3d1;
+}
+
+body {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  background:
+    radial-gradient(circle at top right, #f3e6d2 0, transparent 45%),
+    radial-gradient(circle at bottom left, #ecd8be 0, transparent 40%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.container {
+  max-width: 980px;
+  margin: 40px auto;
+  padding: 0 18px 24px;
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 14px 26px rgba(34, 20, 5, 0.06);
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  letter-spacing: 0.2px;
+}
+
+h2,
+h3 {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f8efe2;
+  color: var(--accent-dark);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.divider {
+  margin: 16px 0 18px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--line), transparent);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 9px;
+  font-weight: 600;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+input[type="file"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.radio-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.radio-item:has(input:checked) {
+  border-color: var(--accent);
+  background: #fff7f0;
+}
+
+.btn {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  background: #fff;
+  color: var(--ink);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.07);
+}
+
+.btn:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.btn-primary {
+  width: 100%;
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #cf7333 0%, #b65e24 100%);
+  color: #fffaf5;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #d47a3d 0%, #bc652b 100%);
+}
+
+.status {
+  margin-top: 16px;
+  color: #4d4438;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.error {
+  margin-top: 8px;
+  color: #7e1f1f;
+  background: #fff1ef;
+  border: 1px solid #efc5bf;
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 12px;
+}
+
+.quiz-item {
+  border-top: 1px dashed #e4d7c5;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.quiz-item ul {
+  margin: 10px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.quiz-item li {
+  background: #fff;
+  border: 1px solid #ecdfcf;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.answer-block {
+  background: #f9f2e8;
+  border: 1px solid #e5cfb5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.hidden-answer {
+  display: none;
+}
+
+.loading-wrap {
+  margin-top: 12px;
+}
+
+.progress-label {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  background: var(--soft);
+  border-radius: 999px;
+}
+
+.progress-indeterminate {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, #d48a57, #c36e34);
+  border-radius: inherit;
+  animation: loading 1s ease-in-out infinite;
+}
+
+.hidden {
+  display: none;
+}
+
+@keyframes loading {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@media (max-width: 760px) {
+  .results-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

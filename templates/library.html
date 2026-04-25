@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Question Bank - QUIZGEN{% endblock %}
+
+{% block head_extra %}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.pdf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.pdf-card { padding: 16px; }
+.pdf-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.pdf-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.pdf-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+.empty {
+  text-align: center;
+  padding: 36px 16px;
+}
+.empty-emoji { font-size: 2.4rem; }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.modal { width: 100%; max-width: 420px; padding: 16px; }
+.modal h3 { margin-top: 0; }
+.choices { display: flex; gap: 8px; margin: 14px 0 16px; }
+.choice {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  padding: 10px;
+  cursor: pointer;
+}
+.choice.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #eff6ff;
+  font-weight: 700;
+}
+.mode-list { display: grid; gap: 8px; margin: 8px 0 14px; }
+.mode-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+}
+.mode-item.active {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+.mode-item strong { display: block; margin-bottom: 4px; }
+.topic-edit-input {
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+{% endblock %}
+
+{% block content %}
+<section class="topbar">
+  <div>
+    <h1 style="margin:0;">PDF Question Bank</h1>
+    <p class="muted" style="margin:6px 0 0;">Manage your PDFs and generate quizzes anytime.</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button id="quick-upload-btn" class="btn" type="button">Quick Upload</button>
+    <button id="upload-main-btn" class="btn btn-primary" type="button">+ Upload PDF</button>
+  </div>
+</section>
+
+<section class="card" style="padding:16px;">
+  {% if pdfs %}
+    <div class="pdf-grid">
+      {% for pdf in pdfs %}
+        <article class="card pdf-card">
+          <h3 class="pdf-title">{{ pdf.topic_name or pdf.original_filename }}</h3>
+          <p class="pdf-meta">Source file: {{ pdf.original_filename }}</p>
+          <p class="pdf-meta">Pages: {{ pdf.page_count or "-" }}</p>
+          <p class="pdf-meta">Size: {{ "%.2f"|format((pdf.file_size or 0) / (1024*1024)) }} MB</p>
+          <p class="pdf-meta">Uploaded: {{ pdf.uploaded_at.strftime("%Y-%m-%d %H:%M") }}</p>
+          <div class="pdf-actions">
+            <button class="btn btn-primary js-generate" data-pdf-id="{{ pdf.id }}">Generate Quiz</button>
+            <button
+              class="btn js-edit-topic"
+              data-pdf-id="{{ pdf.id }}"
+              data-topic-name="{{ pdf.topic_name or pdf.original_filename }}"
+            >
+              Edit Topic
+            </button>
+            <button class="btn btn-danger js-delete" data-pdf-id="{{ pdf.id }}">Delete</button>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-emoji">📚</div>
+      <h3 style="margin-bottom:8px;">No PDFs in your library yet</h3>
+      <p class="muted">Upload one first so you can reuse it for multiple quiz sessions.</p>
+      <button id="upload-empty-btn" class="btn btn-primary" type="button">Upload Your First PDF</button>
+    </div>
+  {% endif %}
+</section>
+
+<div id="upload-modal" class="modal-backdrop hidden">
+  <div class="card modal">
+    <h3>Upload PDF to Library</h3>
+    <form id="upload-form">
+      <label for="topic_name" style="display:block; margin-bottom:6px;">Topic name</label>
+      <input
+        id="topic_name"
+        name="topic_name"
+        type="text"
+        maxlength="255"
+        placeholder="e.g. Corporate Tax Fundamentals"
+        required
+        style="width:100%; margin:0 0 10px; padding:10px; border:1px solid var(--border); border-radius:10px;"
+      >
+      <input name="pdf_file" type="file" accept=".pdf" required style="margin:10px 0 14px;">
+      <div style="display:flex; gap:8px; justify-content:end;">
+        <button class="btn" type="button" data-close-modal="upload-modal">Cancel</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="edit-topic-modal" class="modal-backdrop hidden">
+  <div class="card modal">
+    <h3>Edit Topic Name</h3>
+    <input id="edit-topic-input" class="topic-edit-input" type="text" maxlength="255" />
+    <div style="display:flex; gap:8px; justify-content:end;">
+      <button class="btn" type="button" data-close-modal="edit-topic-modal">Cancel</button>
+      <button id="save-topic-btn" class="btn btn-primary" type="button">Save Topic</button>
+    </div>
+  </div>
+</div>
+
+<div id="generate-modal" class="modal-backdrop hidden">
+  <div class="card modal">
+    <h3>Select Question Count</h3>
+    <p class="muted">Choose 5, 10, or 15 questions for this quiz session.</p>
+    <div class="choices">
+      <div class="choice" data-count="5">5</div>
+      <div class="choice active" data-count="10">10</div>
+      <div class="choice" data-count="15">15</div>
+    </div>
+    <p class="muted" style="margin:0 0 8px;">Select mode:</p>
+    <div class="mode-list">
+      <div class="mode-item active" data-mode="reuse">
+        <strong>Use last generated set</strong>
+        <span class="muted">Reuse the most recent session with the same question count.</span>
+      </div>
+      <div class="mode-item" data-mode="regenerate">
+        <strong>Generate new set</strong>
+        <span class="muted">Call the model again to create a fresh set of questions.</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:end;">
+      <button class="btn" type="button" data-close-modal="generate-modal">Cancel</button>
+      <button id="confirm-generate" class="btn btn-primary" type="button">Start Quiz</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedPdfId = null;
+let selectedQuestionCount = 10;
+let selectedMode = "reuse";
+
+const uploadModal = document.getElementById("upload-modal");
+const generateModal = document.getElementById("generate-modal");
+const editTopicModal = document.getElementById("edit-topic-modal");
+const uploadBtn = document.getElementById("quick-upload-btn");
+const uploadMainBtn = document.getElementById("upload-main-btn");
+const uploadEmptyBtn = document.getElementById("upload-empty-btn");
+const uploadForm = document.getElementById("upload-form");
+const confirmGenerateBtn = document.getElementById("confirm-generate");
+const editTopicInput = document.getElementById("edit-topic-input");
+const saveTopicBtn = document.getElementById("save-topic-btn");
+let editTopicPdfId = null;
+
+function openModal(el) { if (el) el.classList.remove("hidden"); }
+function closeModal(el) { if (el) el.classList.add("hidden"); }
+
+if (uploadBtn) uploadBtn.addEventListener("click", () => openModal(uploadModal));
+if (uploadMainBtn) uploadMainBtn.addEventListener("click", () => openModal(uploadModal));
+if (uploadEmptyBtn) uploadEmptyBtn.addEventListener("click", () => openModal(uploadModal));
+
+document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const id = btn.getAttribute("data-close-modal");
+    closeModal(document.getElementById(id));
+  });
+});
+
+if (uploadForm) {
+  uploadForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(uploadForm);
+    const res = await fetch("/api/pdf/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Upload failed.");
+      return;
+    }
+    window.location.reload();
+  });
+}
+
+document.querySelectorAll(".js-delete").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const pdfId = btn.getAttribute("data-pdf-id");
+    if (!confirm("Delete this PDF from your library?")) return;
+    const res = await fetch(`/api/pdf/${pdfId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert(data.error || "Failed to delete PDF.");
+      return;
+    }
+    window.location.reload();
+  });
+});
+
+document.querySelectorAll(".js-edit-topic").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    editTopicPdfId = Number(btn.getAttribute("data-pdf-id"));
+    editTopicInput.value = btn.getAttribute("data-topic-name") || "";
+    openModal(editTopicModal);
+    editTopicInput.focus();
+  });
+});
+
+if (saveTopicBtn) {
+  saveTopicBtn.addEventListener("click", async () => {
+    if (!editTopicPdfId) return;
+    const topicName = (editTopicInput.value || "").trim();
+    if (!topicName) {
+      alert("Topic name is required.");
+      return;
+    }
+
+    saveTopicBtn.disabled = true;
+    saveTopicBtn.textContent = "Saving...";
+    const res = await fetch(`/api/pdf/${editTopicPdfId}/topic`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic_name: topicName })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Failed to update topic.");
+      saveTopicBtn.disabled = false;
+      saveTopicBtn.textContent = "Save Topic";
+      return;
+    }
+    window.location.reload();
+  });
+}
+
+document.querySelectorAll(".js-generate").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    selectedPdfId = btn.getAttribute("data-pdf-id");
+    openModal(generateModal);
+  });
+});
+
+document.querySelectorAll(".choice").forEach((choice) => {
+  choice.addEventListener("click", () => {
+    document.querySelectorAll(".choice").forEach((node) => node.classList.remove("active"));
+    choice.classList.add("active");
+    selectedQuestionCount = Number(choice.getAttribute("data-count"));
+  });
+});
+
+document.querySelectorAll(".mode-item").forEach((item) => {
+  item.addEventListener("click", () => {
+    document.querySelectorAll(".mode-item").forEach((node) => node.classList.remove("active"));
+    item.classList.add("active");
+    selectedMode = item.getAttribute("data-mode");
+  });
+});
+
+if (confirmGenerateBtn) {
+  confirmGenerateBtn.addEventListener("click", async () => {
+    if (!selectedPdfId) return;
+    confirmGenerateBtn.disabled = true;
+    confirmGenerateBtn.textContent = "Generating...";
+
+    const res = await fetch("/api/quiz/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pdf_id: Number(selectedPdfId),
+        num_questions: selectedQuestionCount,
+        mode: selectedMode
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Failed to generate quiz.");
+      confirmGenerateBtn.disabled = false;
+      confirmGenerateBtn.textContent = "Start Quiz";
+      return;
+    }
+    window.location.href = data.redirect_url || `/quiz/${data.session_id}`;
+  });
+}
+</script>
+{% endblock %}

@@ -13,6 +13,7 @@ load_dotenv()
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4")
 REQUEST_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "2048"))
 _RESOLVED_MODEL: str | None = None
 
 
@@ -213,6 +214,11 @@ def _call_ollama_chat(messages: list[dict]) -> str:
         "messages": messages,
         "stream": False,
         "format": "json",
+        "options": {
+            # Prevent output being cut mid-JSON for multi-question responses.
+            "num_predict": OLLAMA_NUM_PREDICT,
+            "temperature": 0.2,
+        },
     }
 
     try:
@@ -237,9 +243,9 @@ def _build_messages_for_text(extracted_text: str, num_questions: int) -> list[di
 
 def _build_messages_for_images(images_b64: list[str], num_questions: int) -> list[dict]:
     content = (
-        "Berikut adalah halaman PDF dalam bentuk gambar.\n"
-        "Pahami kontennya lalu buat soal sesuai aturan di system prompt.\n\n"
-        f"Buat {num_questions} soal pilihan ganda dengan format JSON yang sama."
+        "The following inputs are PDF pages as images.\n"
+        "Understand the content and generate questions according to the system prompt.\n\n"
+        f"Create {num_questions} multiple-choice questions using the same JSON format."
     )
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -279,8 +285,8 @@ def generate_quiz(content: dict, num_questions: int) -> list[dict]:
                 {
                     "role": "user",
                     "content": (
-                        "Output sebelumnya tidak valid. Ulangi dan kirim HANYA JSON array "
-                        "valid sesuai format yang diminta."
+                        "Your previous output was invalid. Retry and return ONLY a valid "
+                        "JSON array in the requested format."
                     ),
                 }
             )
