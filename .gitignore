@@ -1,0 +1,4 @@
+__pycache__/
+.env
+/core/__pycache__/
+PRD_QuizGen_MVP.md
