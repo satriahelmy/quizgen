@@ -1,97 +1,62 @@
 {% extends "base.html" %}
 
-{% block title %}Quiz Results - QUIZGEN{% endblock %}
-
-{% block head_extra %}
-.result-top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  align-items: center;
-}
-.score-box {
-  min-width: 180px;
-  text-align: center;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: #fff;
-}
-.score-value { font-size: 2rem; margin: 0; }
-.score-success { color: var(--success); }
-.score-warning { color: var(--warning); }
-.score-danger { color: var(--danger); }
-.review-list { margin-top: 12px; display: grid; gap: 10px; }
-.review-item { padding: 12px; }
-.review-title { margin: 0 0 8px; }
-.tag-ok { color: var(--success); font-weight: 700; }
-.tag-bad { color: var(--danger); font-weight: 700; }
-.improvement {
-  margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-weight: 600;
-}
-.improvement.up { border-color: #86efac; background: #f0fdf4; color: #166534; }
-.improvement.down { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
-.improvement.same { border-color: #fde68a; background: #fffbeb; color: #92400e; }
-{% endblock %}
+{% block title %}Results · QuizGen{% endblock %}
 
 {% block content %}
-<section class="card" style="padding:16px;">
+<section class="card card--tight">
   <div class="result-top">
     <div>
-      <h1 style="margin:0;">Quiz Results</h1>
-      <p class="muted" style="margin:6px 0 0;">Session: {{ session.id }}</p>
+      <p class="eyebrow">Quiz results</p>
+      <h1 class="title-gap">Your score</h1>
+      <p class="muted caption">Session {{ session.id }}</p>
     </div>
     <div class="score-box">
-      {% set score_class = "score-success" if percentage >= 70 else ("score-warning" if percentage >= 50 else "score-danger") %}
-      <p class="score-value {{ score_class }}">{{ attempt.score }} / {{ attempt.total }}</p>
-      <p class="muted" style="margin:0;">{{ percentage }}%</p>
+      <p class="score-value score-neutral">{{ attempt.score }} / {{ attempt.total }}</p>
+      <p class="caption score-muted">{{ percentage }}%</p>
     </div>
   </div>
   {% if improvement %}
-    <div class="improvement {{ improvement.direction }}">
+    <div class="improvement">
       {% if improvement.direction == "up" %}
-        📈 Improvement +{{ improvement.delta }}% from the previous attempt ({{ improvement.baseline_percentage }}%).
+        Up {{ improvement.delta }}% from your previous attempt ({{ improvement.baseline_percentage }}%).
       {% elif improvement.direction == "down" %}
-        📉 Dropped by {{ improvement.delta|abs }}% from the previous attempt ({{ improvement.baseline_percentage }}%).
+        Down {{ improvement.delta|abs }}% from your previous attempt ({{ improvement.baseline_percentage }}%).
       {% else %}
-        ➖ Same as the previous attempt ({{ improvement.baseline_percentage }}%).
+        Same as your previous attempt ({{ improvement.baseline_percentage }}%).
       {% endif %}
     </div>
   {% endif %}
 
-  <div style="display:flex; gap:8px; margin-top:14px;">
-    <button id="retry-btn" class="btn btn-primary" data-pdf-id="{{ session.pdf_id }}">Retry Quiz</button>
-    <a class="btn" href="/api/result/{{ session.id }}/{{ attempt.id }}/export-pdf">Export PDF</a>
+  <div class="result-actions">
+    <button id="retry-btn" class="btn btn-primary" type="button" data-pdf-id="{{ session.pdf_id }}">Retry quiz</button>
+    <a class="btn btn-ghost" href="/api/result/{{ session.id }}/{{ attempt.id }}/export-pdf">Export PDF</a>
+    <a class="btn btn-ghost" href="/api/session/{{ session.id }}/export-question-paper">Export question paper</a>
     {% if wrong_count > 0 %}
-      <button id="retry-wrong-btn" class="btn" data-session-id="{{ session.id }}" data-attempt-id="{{ attempt.id }}">
-        Remedial ({{ wrong_count }} wrong questions)
+      <button id="retry-wrong-btn" class="btn btn-ghost" type="button" data-session-id="{{ session.id }}" data-attempt-id="{{ attempt.id }}">
+        Remedial ({{ wrong_count }} wrong)
       </button>
     {% endif %}
-    <a href="/library" class="btn">Back to Library</a>
+    <a class="btn btn-secondary" href="{{ url_for('library') }}">Library</a>
   </div>
 </section>
 
-<section class="card" style="padding:16px; margin-top:14px;">
-  <h2 style="margin-top:0;">Answer Review</h2>
+<section class="card card--tight">
+  <h2 class="section-title">Answer review</h2>
   <div class="review-list">
     {% for item in review_items %}
       <article class="card review-item">
         <h3 class="review-title">
           {% if item.is_correct %}
-            <span class="tag-ok">✅</span>
+            <span class="tag-ok">Correct.</span>
           {% else %}
-            <span class="tag-bad">❌</span>
+            <span class="tag-bad">Incorrect.</span>
           {% endif %}
           Question {{ item.order }}. {{ item.question }}
         </h3>
-        <p style="margin:4px 0;"><strong>Your answer:</strong> {{ item.user_answer }}</p>
-        <p style="margin:4px 0;"><strong>Correct answer:</strong> {{ item.correct_answer }}</p>
+        <p class="review-body"><strong>Your answer:</strong> {{ item.user_answer }}</p>
+        <p class="review-body"><strong>Correct answer:</strong> {{ item.correct_answer }}</p>
         {% if item.explanation %}
-          <p style="margin:6px 0 0;"><strong>Explanation:</strong> {{ item.explanation }}</p>
+          <p class="review-body review-explanation"><strong>Explanation:</strong> {{ item.explanation }}</p>
         {% endif %}
       </article>
     {% endfor %}
@@ -106,7 +71,7 @@ if (retryBtn) {
   retryBtn.addEventListener("click", async () => {
     const pdfId = Number(retryBtn.getAttribute("data-pdf-id"));
     retryBtn.disabled = true;
-    retryBtn.textContent = "Generating...";
+    retryBtn.textContent = "Generating…";
     const res = await fetch("/api/quiz/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,7 +81,7 @@ if (retryBtn) {
     if (!res.ok) {
       alert(data.error || "Failed to regenerate quiz.");
       retryBtn.disabled = false;
-      retryBtn.textContent = "Retry Quiz";
+      retryBtn.textContent = "Retry quiz";
       return;
     }
     window.location.href = data.redirect_url || `/quiz/${data.session_id}`;
@@ -129,7 +94,7 @@ if (retryWrongBtn) {
     const sessionId = retryWrongBtn.getAttribute("data-session-id");
     const attemptId = Number(retryWrongBtn.getAttribute("data-attempt-id"));
     retryWrongBtn.disabled = true;
-    retryWrongBtn.textContent = "Creating remedial set...";
+    retryWrongBtn.textContent = "Creating…";
 
     const res = await fetch(`/api/quiz/${sessionId}/${attemptId}/retry-wrong`, {
       method: "POST"

@@ -1,64 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Quiz Mode - QUIZGEN{% endblock %}
-
-{% block head_extra %}
-.quiz-wrap { padding: 16px; }
-.progress-text { margin: 0 0 8px; color: var(--text-secondary); font-weight: 600; }
-.progress-track {
-  width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  width: 0;
-  background: var(--primary);
-  transition: width 0.2s ease;
-}
-.question-title { margin: 18px 0 12px; font-size: 1.1rem; line-height: 1.5; }
-.choices { display: grid; gap: 10px; }
-.choice-btn {
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 10px;
-  padding: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-.choice-btn:hover { border-color: var(--primary); }
-.choice-btn:disabled { cursor: not-allowed; opacity: 0.95; }
-.choice-correct { background: #f0fdf4; border-color: var(--success); color: #14532d; }
-.choice-wrong { background: #fef2f2; border-color: var(--danger); color: #7f1d1d; }
-.explanation {
-  margin-top: 14px;
-  border-left: 4px solid var(--primary);
-  background: #eff6ff;
-  padding: 10px 12px;
-  border-radius: 8px;
-}
-{% endblock %}
+{% block title %}Quiz · QuizGen{% endblock %}
 
 {% block content %}
 <section class="card quiz-wrap">
-  <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap: wrap;">
-    <h1 style="margin:0;">Quiz Mode</h1>
-    <a class="btn" href="/library">Back to Library</a>
+  <div class="quiz-header">
+    <div>
+      <p class="eyebrow">Quiz</p>
+      <h1 class="title-gap">In progress</h1>
+      <p class="muted caption">Session {{ session.id }}</p>
+    </div>
+    <a class="btn btn-ghost" href="{{ url_for('library') }}">Library</a>
   </div>
-  <p class="muted">Session ID: {{ session.id }}</p>
 
-  <p id="progress-text" class="progress-text">Loading questions...</p>
-  <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+  <p id="progress-text" class="progress-text">Loading questions…</p>
+  <div class="progress-track" aria-hidden="true"><div id="progress-fill" class="progress-fill"></div></div>
 
-  <h2 id="question-title" class="question-title">...</h2>
-  <div id="choices" class="choices"></div>
+  <h2 id="question-title" class="question-title">…</h2>
+  <div id="choices" class="quiz-choices"></div>
 
   <div id="explanation" class="explanation hidden"></div>
 
-  <div style="margin-top:14px; display:flex; justify-content:flex-end;">
-    <button id="next-btn" class="btn btn-primary hidden">Next →</button>
+  <div class="quiz-footer-actions">
+    <button id="next-btn" class="btn btn-primary hidden" type="button">Next</button>
   </div>
 </section>
 {% endblock %}
@@ -85,6 +49,7 @@ function renderQuestion() {
   progressText.textContent = `Question ${currentIndex + 1} of ${questions.length}`;
   progressFill.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
   questionTitle.textContent = `${q.order}. ${q.question}`;
+  explanationEl.classList.remove("explanation--correct", "explanation--incorrect");
   explanationEl.classList.add("hidden");
   explanationEl.textContent = "";
   nextBtn.classList.add("hidden");
@@ -92,8 +57,12 @@ function renderQuestion() {
 
   ["A", "B", "C", "D"].forEach((key) => {
     const btn = document.createElement("button");
+    btn.type = "button";
     btn.className = "choice-btn";
-    btn.textContent = `${key}. ${q.options[key]}`;
+    const textSpan = document.createElement("span");
+    textSpan.className = "choice-btn__text";
+    textSpan.textContent = `${key}. ${q.options[key]}`;
+    btn.appendChild(textSpan);
     btn.onclick = () => selectAnswer(key, btn);
     choicesWrap.appendChild(btn);
   });
@@ -107,17 +76,32 @@ function selectAnswer(selectedKey, selectedBtn) {
   buttons.forEach((btn, idx) => {
     const key = ["A", "B", "C", "D"][idx];
     btn.disabled = true;
-    if (key === q.correct_answer) btn.classList.add("choice-correct");
-    if (key === selectedKey && selectedKey !== q.correct_answer) btn.classList.add("choice-wrong");
+    if (key === q.correct_answer) {
+      btn.classList.add("choice-correct");
+      const badge = document.createElement("span");
+      badge.className = "choice-badge choice-badge--correct";
+      badge.textContent = "True";
+      btn.appendChild(badge);
+    }
+    if (key === selectedKey && selectedKey !== q.correct_answer) {
+      btn.classList.add("choice-wrong");
+      const badge = document.createElement("span");
+      badge.className = "choice-badge choice-badge--wrong";
+      badge.textContent = "False";
+      btn.appendChild(badge);
+    }
   });
 
+  explanationEl.classList.remove("explanation--correct", "explanation--incorrect");
   if (q.explanation) {
     explanationEl.textContent = q.explanation;
+    explanationEl.classList.toggle("explanation--correct", selectedKey === q.correct_answer);
+    explanationEl.classList.toggle("explanation--incorrect", selectedKey !== q.correct_answer);
     explanationEl.classList.remove("hidden");
   }
 
   nextBtn.classList.remove("hidden");
-  nextBtn.textContent = currentIndex === questions.length - 1 ? "See Results" : "Next →";
+  nextBtn.textContent = currentIndex === questions.length - 1 ? "See results" : "Next";
 }
 
 nextBtn.addEventListener("click", async () => {
@@ -128,7 +112,7 @@ nextBtn.addEventListener("click", async () => {
   }
 
   nextBtn.disabled = true;
-  nextBtn.textContent = "Calculating results...";
+  nextBtn.textContent = "Calculating…";
   const res = await fetch(`/api/quiz/${sessionId}/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -138,7 +122,7 @@ nextBtn.addEventListener("click", async () => {
   if (!res.ok) {
     alert(data.error || "Failed to submit quiz.");
     nextBtn.disabled = false;
-    nextBtn.textContent = "See Results";
+    nextBtn.textContent = "See results";
     return;
   }
   window.location.href = data.result_url;
@@ -154,8 +138,8 @@ async function bootstrapQuiz() {
   }
   questions = data.questions || [];
   if (!questions.length) {
-    progressText.textContent = "No questions found in this session.";
-    questionTitle.textContent = "Please go back to the library and generate again.";
+    progressText.textContent = "No questions in this session.";
+    questionTitle.textContent = "Go back to the library and generate again.";
     return;
   }
   renderQuestion();

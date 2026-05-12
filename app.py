@@ -499,6 +499,60 @@ def export_result_pdf(session_id: str, attempt_id: int):
     )
 
 
+@app.route("/api/session/<session_id>/export-question-paper", methods=["GET"])
+def export_question_paper_pdf(session_id: str):
+    session = QuizSession.query.get_or_404(session_id)
+    questions = (
+        Question.query.filter_by(session_id=session.id).order_by(Question.order.asc()).all()
+    )
+    topic_name = session.pdf.topic_name or session.pdf.original_filename
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36,
+    )
+    styles = getSampleStyleSheet()
+    body_style = styles["Normal"].clone("QuestionBody")
+    body_style.fontSize = 10
+    body_style.leading = 14
+    body = []
+
+    body.append(Paragraph("QUIZGEN - Question Paper", styles["Title"]))
+    body.append(Spacer(1, 8))
+    body.append(Paragraph(f"<b>Topic:</b> {topic_name}", styles["Normal"]))
+    body.append(Paragraph(f"<b>Session ID:</b> {session.id}", styles["Normal"]))
+    body.append(Paragraph(f"<b>Total Questions:</b> {len(questions)}", styles["Normal"]))
+    body.append(Spacer(1, 14))
+
+    for q in questions:
+        body.append(
+            Paragraph(f"<b>Q{q.order}.</b> {q.question_text}", styles["Heading4"])
+        )
+        options_text = (
+            f"A. {q.option_a}<br/>"
+            f"B. {q.option_b}<br/>"
+            f"C. {q.option_c}<br/>"
+            f"D. {q.option_d}"
+        )
+        body.append(Paragraph(options_text, body_style))
+        body.append(Spacer(1, 12))
+
+    doc.build(body)
+    buffer.seek(0)
+    filename = f"question-paper-{session.id[:8]}.pdf"
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/pdf",
+    )
+
+
 @app.route("/api/quiz/<session_id>/<int:attempt_id>/retry-wrong", methods=["POST"])
 def api_retry_wrong_questions(session_id: str, attempt_id: int):
     session = QuizSession.query.get_or_404(session_id)
